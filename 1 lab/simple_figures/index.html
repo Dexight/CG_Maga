@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+    <body style="display: flex; align-items: center; flex-direction: column;">
+        <canvas id="glCanvas" width="400" height="400"></canvas>
+        <!--Выпадающие списки-->
+        <div style="display: flex; flex-direction: row; align-items: center;">
+          <div style = "display: flex; flex-direction: column; margin: 5px; align-items: center;">
+            <label for="figure"><b>Выберите фигуру:</b></label>
+            <select id="figure" name="figure">
+                <option value="4angle" selected>Квадрат</option>
+                <option value="triangle">Треугольник</option>
+                <option value="5angle">Правильный пятиугольник</option>
+            </select>
+          </div>
+          
+          <input type="color" id="chooseColor" value="#00ff00" style="height: 30px; width: 70px; padding:0px 1px; background-color: white; display: inline; margin: 5px;">
+        </div>
+        <!--Панельки-->
+        <div id = "quadrangleChangePanel" style="display: flex; flex-direction: column; align-items: center;">
+            <label for="lined"><input type="checkbox" id="lined">Полосатый</label>
+            <label for="K" id="kParam"> K: <input type="range" id="K" min="0" max="20.0" step="2.0" value="4"> </label>
+        </div>
+        <div id = "pentagonRadiusChangePanel" style="display: none; flex-direction: column; align-items: center;">
+          <label> Радиус описанной окружности: </label>
+          <label> R: <input type="range" id="R" min="0.01" max="1" step="0.01" value="1"> </label>
+        </div>
+        <script src="script.js"></script>
+    </body>
+</html>
