@@ -64,6 +64,37 @@ void main() {
 }
 `;
 
+const lambertFragmentShaderSource = `#version 300 es
+precision highp float;
+
+in vec3 vPosition;
+in vec3 vNormal;
+
+uniform vec3 uViewPosition;
+
+uniform vec3 uPointLightPosition;
+uniform vec3 uPointLightColor;
+
+out vec4 fragColor;
+
+void main() {
+    vec3 objectColor = vec3(1.0, 1.0, 1.0);
+
+    // Нормализация нормали
+    vec3 normal = normalize(vNormal);
+
+    // Ambient light
+    vec3 ambient = 0.1 * objectColor;
+
+    // Point light
+    vec3 pointLightDir = normalize(uPointLightPosition - vPosition);
+    vec3 pointLight = uPointLightColor * max(dot(normal, pointLightDir), 0.0);
+
+    vec3 lighting = ambient + pointLight;
+    fragColor = vec4(lighting * objectColor, 1.0);
+}
+`;
+
 const toonFragmentShaderSource = `#version 300 es
 precision highp float;
 
@@ -153,6 +184,48 @@ void main() {
 }
 `;
 
+const blinnPhongFragmentShaderSource = `#version 300 es
+precision highp float;
+
+in vec3 vPosition;
+in vec3 vNormal;
+
+uniform vec3 uViewPosition;
+
+uniform vec3 uPointLightPosition;
+uniform vec3 uPointLightColor;
+
+out vec4 fragColor;
+
+void main() {
+    vec3 objectColor = vec3(1.0, 1.0, 1.0);
+
+    // Нормализация нормали
+    vec3 normal = normalize(vNormal);
+
+    // Ambient light
+    vec3 ambient = 0.1 * objectColor;
+
+    // Point light
+    vec3 pointLightDir = normalize(uPointLightPosition - vPosition);
+    vec3 viewDir = normalize(uViewPosition - vPosition);
+    
+    // Полувектор между направлением света и направлением взгляда
+    vec3 halfVector = normalize(pointLightDir + viewDir);
+    
+    float pointSpecularStrength = 0.5; // Интенсивность зеркального отражения
+    
+    // Вычисление specular по модели Блинна-Фонга
+    float specPoint = pow(max(dot(normal, halfVector), 0.0), 32.0); // Более высокая степень для более резких бликов
+    vec3 pointLightSpecular = pointSpecularStrength * specPoint * uPointLightColor;
+
+    vec3 pointLightDiffuse = uPointLightColor * max(dot(normal, pointLightDir), 0.0);
+
+    vec3 lighting = ambient + pointLightDiffuse + pointLightSpecular;
+    fragColor = vec4(lighting * objectColor, 1.0);
+}
+`;
+
 // Компиляция шейдеров
 function compileShader(gl, source, type) 
 {
@@ -207,6 +280,8 @@ class GLObject
         this.programPhong = program;
         this.programToon = createProgram(gl, vertexShaderSource, toonFragmentShaderSource);
         this.programOrenNayar = createProgram(gl, vertexShaderSource, orenNayarFragmentShaderSource);
+        this.programLambert = createProgram(gl, vertexShaderSource, lambertFragmentShaderSource);
+        this.programBlinnPhong = createProgram(gl, vertexShaderSource, blinnPhongFragmentShaderSource);
     }
 
     async changeLightingModel() 
@@ -222,6 +297,14 @@ class GLObject
         else if (this.lighting === "oren-nayar")
         {
             this.program = this.programOrenNayar;
+        }
+        else if (this.lighting === "lambert")
+        {
+            this.program = this.programLambert;
+        }
+        else if (this.lighting === "blinn-phong")
+        {
+            this.program = this.programBlinnPhong;
         }
     }
 
@@ -422,18 +505,7 @@ function updateModelViewMatrix(modelMatrix, cameraPosition, cameraTarget, camera
 
     // Обработчик света для выбранной фигуры
     selectLighting.addEventListener('change', (e) => {
-        const selectedValue = e.target.value;
-
-        switch (selectedValue)
-        {
-            case "phong": currentFigure.lighting = "phong";
-                          break;
-            case "toonshading": currentFigure.lighting = "toonshading";
-                                break;
-            case "oren-nayar": currentFigure.lighting = "oren-nayar";
-                          break;
-        }
-
+        currentFigure.lighting = e.target.value;
         currentFigure.changeLightingModel();
     });
 
