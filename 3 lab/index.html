@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+    canvas {
+        display: block;
+    }
+    .controls {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .control-group {
+        margin-bottom: 10px;
+    }
+    .all {
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+    }
+</style>
+</head>
+<body style="display: flex; align-items: center; flex-direction: column;">
+    <div class = "all">
+        <div class="controls">
+            <div class="control-group">
+                <label for="pointLightX">Point Light X:</label>
+                <input type="range" id="pointLightX" min="-300" max="300" value="0">
+            </div>
+            <div class="control-group">
+                <label for="pointLightY">Point Light Y:</label>
+                <input type="range" id="pointLightY" min="-300" max="300" value="0">
+            </div>
+            <div class="control-group">
+                <label for="pointLightZ">Point Light Z:</label>
+                <input type="range" id="pointLightZ" min="-300" max="300" value="10">
+            </div>
+        </div>
+        <div>
+            <canvas id="glCanvas" width="800" height="600"></canvas>
+        </div>
+        <div class = "controls">
+            <label for="figure"><b>Выберите фигуру:</b></label>
+            <select id="figure" name="figure">
+                <option value="snowman" selected>Снеговик</option>
+                <option value="gun">Пистолет</option>
+                <option value="balloon">Шарик</option>
+                <option value="carpet">Пол</option>
+            </select>
+            <label for="lighting"><b>Выберите освещение:</b></label>
+            <select id="lighting" name="lighting">
+                <option value="phong" selected>Phong</option>
+                <option value="toonshading">Toonshading</option>
+                <option value="oren-nayar">Oren-Nayar</option>
+            </select>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
