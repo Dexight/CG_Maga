@@ -220,7 +220,6 @@ class Figure{
             gl.uniformMatrix4fv(this.uProjectionMatrix, false, projectionMatrix);
             gl.uniformMatrix4fv(this.uModelViewMatrix, false, modelViewMatrix);
             
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
             gl.drawElements(gl.TRIANGLES, this.indices.length, gl.UNSIGNED_SHORT, 0);
         }
         else 

@@ -50,7 +50,6 @@ class Figure{
         this.vertexShaderSource = vertexShader;
         this.fragmentShaderSource = fragmentShader;
         this.positions = positions;
-        // для куба
         this.indices = indices;
         this.colors = colors;
 
@@ -105,25 +104,70 @@ class Figure{
             console.error("Атрибут aColor не найден в шейдерной программе.");
         }
 
-        this.positionBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.positions), gl.STATIC_DRAW);
+        // По ТЗ объединил pos и color буферы в один
+        const vertexCount = this.positions.length / 3;
+        const vertexData = [];
 
-        // если куб
-        if (this.indices) {
-            this.colorBuffer = gl.createBuffer();
-            gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
-            gl.bufferData(gl.ARRAY_BUFFER, this.colors, gl.STATIC_DRAW);
-
-            gl.enableVertexAttribArray(this.colorAttributeLocation);
-            gl.vertexAttribPointer(this.colorAttributeLocation, 4, gl.FLOAT, false, 4 * Float32Array.BYTES_PER_ELEMENT, 0);
-
-            this.uModelViewMatrix = gl.getUniformLocation(this.shaderProgram, "uModelViewMatrix");
-            this.uProjectionMatrix = gl.getUniformLocation(this.shaderProgram, "uProjectionMatrix");
-            this.indexBuffer = gl.createBuffer();
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.indices), gl.STATIC_DRAW);
+        for (let i = 0; i < vertexCount; i++) {
+            // Позиция
+            vertexData.push(
+                this.positions[i*3],
+                this.positions[i*3+1],
+                this.positions[i*3+2]
+            );
+            
+            // Цвет
+            vertexData.push(
+                this.colors[i*4],
+                this.colors[i*4+1],
+                this.colors[i*4+2],
+                this.colors[i*4+3]
+            );
         }
+
+        this.vertexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexData), gl.STATIC_DRAW);
+
+        const floatSize = 4; // в байтах
+        const byteStep = 7 * floatSize;
+
+        // Указатель позиции
+        gl.enableVertexAttribArray(this.positionAttributeLocation);
+        gl.vertexAttribPointer(
+            this.positionAttributeLocation, 
+            3, // 3 компонента
+            gl.FLOAT,
+            false,
+            byteStep, // шаг в байтах
+            0 // смещение
+        );
+        
+        // УКазатель цвета
+        gl.enableVertexAttribArray(this.colorAttributeLocation);
+        gl.vertexAttribPointer(
+            this.colorAttributeLocation, 
+            4, // 4 компонента
+            gl.FLOAT,
+            false,
+            byteStep, // шаг в байтах
+            3 * floatSize // смещение (после координат)
+        );
+        
+        // this.positionBuffer = gl.createBuffer();
+        // gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
+        // gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.positions), gl.STATIC_DRAW);
+        // this.colorBuffer = gl.createBuffer();
+        // gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
+        // gl.bufferData(gl.ARRAY_BUFFER, this.colors, gl.STATIC_DRAW);
+        // gl.enableVertexAttribArray(this.colorAttributeLocation);
+        // gl.vertexAttribPointer(this.colorAttributeLocation, 4, gl.FLOAT, false, 4 * Float32Array.BYTES_PER_ELEMENT, 0);
+
+        this.uModelViewMatrix = gl.getUniformLocation(this.shaderProgram, "uModelViewMatrix");
+        this.uProjectionMatrix = gl.getUniformLocation(this.shaderProgram, "uProjectionMatrix");
+        this.indexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.indices), gl.STATIC_DRAW);
     }
 
     draw(position = null)
@@ -131,45 +175,34 @@ class Figure{
         gl.useProgram(this.shaderProgram);
 
         // Привязка буфера позиций
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
         gl.enableVertexAttribArray(this.positionAttributeLocation);
         
-        if (this.indices) { 
-            gl.vertexAttribPointer(this.positionAttributeLocation, 3, gl.FLOAT, false, 3 * Float32Array.BYTES_PER_ELEMENT, 0); 
-            // Привязка буфера цветов
-            
-            gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
-            gl.enableVertexAttribArray(this.colorAttributeLocation);
-            gl.vertexAttribPointer(this.colorAttributeLocation, 4, gl.FLOAT, false, 4 * Float32Array.BYTES_PER_ELEMENT, 0);
-        }
-        else              { gl.vertexAttribPointer(this.positionAttributeLocation, 2, gl.FLOAT, false, 0, 0); }
+        //gl.vertexAttribPointer(this.positionAttributeLocation, 3, gl.FLOAT, false, 3 * Float32Array.BYTES_PER_ELEMENT, 0); 
+        // Привязка буфера цветов
+        
+        //gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
+        //gl.enableVertexAttribArray(this.colorAttributeLocation);
+        //gl.vertexAttribPointer(this.colorAttributeLocation, 4, gl.FLOAT, false, 4 * Float32Array.BYTES_PER_ELEMENT, 0);
 
-        if (this.indices) 
-        {
-            // Матрица проекции
-            const projectionMatrix = mat4.create();
-            mat4.perspective(projectionMatrix, Math.PI / 4, (canvas.width) / canvas.height, 0.1, 100.0);
-            
-            // Матрица вида
-            const modelViewMatrix = mat4.create();
-            
-            mat4.identity(modelViewMatrix);
-            mat4.translate(modelViewMatrix, modelViewMatrix, position);
-            mat4.rotateX(modelViewMatrix, modelViewMatrix, angleX);
-            mat4.rotateY(modelViewMatrix, modelViewMatrix, angleY);
-            mat4.rotateZ(modelViewMatrix, modelViewMatrix, angleZ);
-            mat4.scale(modelViewMatrix, modelViewMatrix, [scaleX, scaleY, scaleZ]);
+        // Матрица проекции
+        const projectionMatrix = mat4.create();
+        mat4.perspective(projectionMatrix, Math.PI / 4, (canvas.width) / canvas.height, 0.1, 100.0);
+        
+        // Матрица вида
+        const modelViewMatrix = mat4.create();
+        
+        mat4.identity(modelViewMatrix);
+        mat4.translate(modelViewMatrix, modelViewMatrix, position);
+        mat4.rotateX(modelViewMatrix, modelViewMatrix, angleX);
+        mat4.rotateY(modelViewMatrix, modelViewMatrix, angleY);
+        mat4.rotateZ(modelViewMatrix, modelViewMatrix, angleZ);
+        mat4.scale(modelViewMatrix, modelViewMatrix, [scaleX, scaleY, scaleZ]);
 
-            gl.uniformMatrix4fv(this.uProjectionMatrix, false, projectionMatrix);
-            gl.uniformMatrix4fv(this.uModelViewMatrix, false, modelViewMatrix);
-            
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-            gl.drawElements(gl.TRIANGLES, this.indices.length, gl.UNSIGNED_SHORT, 0);
-        }
-        else 
-        { 
-            gl.drawArrays(gl.TRIANGLE_FAN, 0, this.positions.length / 2);
-        }
+        gl.uniformMatrix4fv(this.uProjectionMatrix, false, projectionMatrix);
+        gl.uniformMatrix4fv(this.uModelViewMatrix, false, modelViewMatrix);
+
+        gl.drawElements(gl.TRIANGLES, this.indices.length, gl.UNSIGNED_SHORT, 0);
     }
 }
 
@@ -289,9 +322,11 @@ document.addEventListener('keydown', (e) => {
         case 'ArrowRight':
             translateX += moveStep;
             break;
+        case 'б':
         case ',':
             translateZ += moveStep;
             break;
+        case 'ю':
         case '.':
             translateZ -= moveStep;
             break;
