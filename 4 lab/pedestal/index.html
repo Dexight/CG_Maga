@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Подключаем библиотеку gl-matrix через CDN -->
+
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            align-items: center;
+            margin-top: 100px;
+            flex-direction: column;
+        }
+        canvas {
+            border: 6px blue solid;
+            display: block;
+        }
+        label{
+            font-size: 20px;
+        }
+        select{
+            font-size: 15px;
+            margin-bottom: 20px;
+        }
+        option{
+            font-size: 15px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
