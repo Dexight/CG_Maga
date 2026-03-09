@@ -35,8 +35,14 @@ uniform vec3 uViewPosition;
 
 uniform vec3 uPointLightPosition;
 uniform vec3 uPointLightColor;
+uniform float uAmbientCoeff;
+
+uniform float uK0;
+uniform float uK1;
+uniform float uK2;
 
 out vec4 fragColor;
+
 
 void main() {
     vec3 objectColor = vec3(1.0, 1.0, 1.0);
@@ -45,7 +51,7 @@ void main() {
     vec3 normal = normalize(vNormal);
 
     // Ambient light
-    vec3 ambient = 0.1 * objectColor;
+    vec3 ambient = uAmbientCoeff * objectColor;
 
     // Point light
     vec3 pointLightDir = normalize(uPointLightPosition - vPosition);
@@ -57,9 +63,10 @@ void main() {
     vec3 pointLightSpecular = pointSpecularStrength * specPoint * uPointLightColor;
 
     float pointLightDistance = length(uPointLightPosition - vPosition);
+    float attenuation = 1.0 / (uK0 + uK1 * pointLightDistance + uK2 * pointLightDistance * pointLightDistance); // затухание
     vec3 pointLight = uPointLightColor * max(dot(pointLightDir, normal), 0.0) + pointLightSpecular;
 
-    vec3 lighting = ambient + pointLight;
+    vec3 lighting = ambient + attenuation * pointLight;
     fragColor = vec4(lighting * objectColor, 1.0);
 }
 `;
@@ -74,6 +81,11 @@ uniform vec3 uViewPosition;
 
 uniform vec3 uPointLightPosition;
 uniform vec3 uPointLightColor;
+uniform float uAmbientCoeff;
+
+uniform float uK0;
+uniform float uK1;
+uniform float uK2;
 
 out vec4 fragColor;
 
@@ -84,11 +96,14 @@ void main() {
     vec3 normal = normalize(vNormal);
 
     // Ambient light
-    vec3 ambient = 0.1 * objectColor;
+    vec3 ambient = uAmbientCoeff * objectColor;
 
     // Point light
     vec3 pointLightDir = normalize(uPointLightPosition - vPosition);
-    vec3 pointLight = uPointLightColor * max(dot(normal, pointLightDir), 0.0);
+    
+    float pointLightDistance = length(uPointLightPosition - vPosition);
+    float attenuation = 1.0 / (uK0 + uK1 * pointLightDistance + uK2 * pointLightDistance * pointLightDistance); // затухание
+    vec3 pointLight = attenuation * uPointLightColor * max(dot(normal, pointLightDir), 0.0);
 
     vec3 lighting = ambient + pointLight;
     fragColor = vec4(lighting * objectColor, 1.0);
@@ -105,6 +120,11 @@ uniform vec3 uViewPosition;
 
 uniform vec3 uPointLightPosition;
 uniform vec3 uPointLightColor;
+uniform float uAmbientCoeff;
+
+uniform float uK0;
+uniform float uK1;
+uniform float uK2;
 
 out vec4 fragColor;
 
@@ -115,7 +135,7 @@ void main() {
     vec3 normal = normalize(vNormal);
 
     // Ambient light
-    vec3 ambient = 0.1 * objectColor;
+    vec3 ambient = uAmbientCoeff * objectColor;
 
     // Toon shading light steps
     float lightLevels[4] = float[](0.2, 0.5, 0.8, 1.0);
@@ -124,7 +144,9 @@ void main() {
     vec3 pointLightDir = normalize(uPointLightPosition - vPosition);
     float pointIntensity = max(dot(normal, pointLightDir), 0.0);
     float pointStep = lightLevels[int(pointIntensity * 4.0)];
-    vec3 pointLight = pointStep * uPointLightColor;
+    float pointLightDistance = length(uPointLightPosition - vPosition);
+    float attenuation = 1.0 / (uK0 + uK1 * pointLightDistance + uK2 * pointLightDistance * pointLightDistance); // затухание
+    vec3 pointLight = attenuation * pointStep * uPointLightColor;
 
     vec3 lighting = ambient + pointLight;
     fragColor = vec4(lighting * objectColor, 1.0);
@@ -140,6 +162,11 @@ uniform vec3 uViewPosition;
 
 uniform vec3 uPointLightPosition;
 uniform vec3 uPointLightColor;
+uniform float uAmbientCoeff;
+
+uniform float uK0;
+uniform float uK1;
+uniform float uK2;
 
 out vec4 fragColor;
 
@@ -177,9 +204,11 @@ void main() {
     
     // Орен-Найра диффузное освещение для точки света
     float pointDiffuse = orenNayarDiffuse(normal, pointLightDir, viewDir, 0.8);
-    vec3 pointLight = pointDiffuse * uPointLightColor;
+    float pointLightDistance = length(uPointLightPosition - vPosition);
+    float attenuation = 1.0 / (uK0 + uK1 * pointLightDistance + uK2 * pointLightDistance * pointLightDistance); // затухание
+    vec3 pointLight = attenuation * pointDiffuse * uPointLightColor;
 
-    vec3 lighting = pointLight;
+    vec3 lighting = uAmbientCoeff + pointLight;
     fragColor = vec4(lighting * objectColor, 1.0);
 }
 `;
@@ -194,6 +223,11 @@ uniform vec3 uViewPosition;
 
 uniform vec3 uPointLightPosition;
 uniform vec3 uPointLightColor;
+uniform float uAmbientCoeff;
+
+uniform float uK0;
+uniform float uK1;
+uniform float uK2;
 
 out vec4 fragColor;
 
@@ -204,7 +238,7 @@ void main() {
     vec3 normal = normalize(vNormal);
 
     // Ambient light
-    vec3 ambient = 0.1 * objectColor;
+    vec3 ambient = uAmbientCoeff * objectColor;
 
     // Point light
     vec3 pointLightDir = normalize(uPointLightPosition - vPosition);
@@ -221,7 +255,10 @@ void main() {
 
     vec3 pointLightDiffuse = uPointLightColor * max(dot(normal, pointLightDir), 0.0);
 
-    vec3 lighting = ambient + pointLightDiffuse + pointLightSpecular;
+    float pointLightDistance = length(uPointLightPosition - vPosition);
+    float attenuation = 1.0 / (uK0 + uK1 * pointLightDistance + uK2 * pointLightDistance * pointLightDistance); // затухание
+
+    vec3 lighting = ambient + attenuation * (pointLightDiffuse + pointLightSpecular);
     fragColor = vec4(lighting * objectColor, 1.0);
 }
 `;
@@ -412,6 +449,15 @@ let uModelMatrix
 let uPointLightPosition
 let uPointLightColor
 let uViewPosition
+let uAmbientCoeff
+let uK0
+let uK1
+let uK2
+
+let ambientCoeff = 0.01;
+let k0 = 1;
+let k1 = 0;
+let k2 = 0;
 
 function changeLocations(gl, program)
 {
@@ -423,6 +469,11 @@ function changeLocations(gl, program)
     uMVPMatrix = gl.getUniformLocation(program, "uMVPMatrix");
     uModelMatrix = gl.getUniformLocation(program, "uModelMatrix");
 
+    uAmbientCoeff = gl.getUniformLocation(program, "uAmbientCoeff");
+    uK0 = gl.getUniformLocation(program, "uK0");
+    uK1 = gl.getUniformLocation(program, "uK1");
+    uK2 = gl.getUniformLocation(program, "uK2");
+    
     // Источник света
     uPointLightPosition = gl.getUniformLocation(program, "uPointLightPosition");
     uPointLightColor = gl.getUniformLocation(program, "uPointLightColor");
@@ -482,7 +533,19 @@ function updateModelViewMatrix(modelMatrix, cameraPosition, cameraTarget, camera
     document.getElementById('pointLightZ').addEventListener('input', (event) => {
         pointLightPosition[2] = parseFloat(event.target.value);
     });
-
+    document.getElementById('ambientCoeff').addEventListener('input', (event) => {
+        ambientCoeff = parseFloat(event.target.value);
+    });
+    document.getElementById('k0').addEventListener('input', (event) => {
+        k0 = parseFloat(event.target.value);
+    });
+    document.getElementById('k1').addEventListener('input', (event) => {
+        k1 = parseFloat(event.target.value);
+    });
+    document.getElementById('k2').addEventListener('input', (event) => {
+        k2 = parseFloat(event.target.value);
+    });
+    
     // Обработчик выпадающего списка фигур
     let currentFigure = snowman;
     selectFigure.addEventListener('change', (e) => {
@@ -520,6 +583,10 @@ function updateModelViewMatrix(modelMatrix, cameraPosition, cameraTarget, camera
             // Установка параметров источников света
             gl.uniform3fv(uPointLightPosition, pointLightPosition);
             gl.uniform3fv(uPointLightColor, [1.0, 1.0, 1.0]);
+            gl.uniform1f(uAmbientCoeff, ambientCoeff);
+            gl.uniform1f(uK0, k0);
+            gl.uniform1f(uK1, k1);
+            gl.uniform1f(uK2, k2);
         }
 
         // Отрисовка snowman
