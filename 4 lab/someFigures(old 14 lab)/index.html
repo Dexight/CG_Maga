@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL</title>
+    <style>
+        canvas {
+            display: block;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .control-group {
+            margin-bottom: 10px;
+        }
+        .all {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+        }
+    </style>
+</head>
+<body>
+    <div class = "all">
+        <div class="controls">
+            <div class="control-group">
+                <label for="pointLightEnabled">Point Light Enabled:</label>
+                <input type="checkbox" id="pointLightEnabled" checked>
+            </div>
+            <div class="control-group">
+                <label for="spotLightEnabled">Spot Light Enabled:</label>
+                <input type="checkbox" id="spotLightEnabled">
+            </div>
+            <div class="control-group">
+                <label for="directLightEnabled">Directional Light Enabled:</label>
+                <input type="checkbox" id="directLightEnabled">
+            </div>
+
+            <p></p>
+            
+            <div class="control-group">
+                <label for="pointLightX">Point Light X:</label>
+                <input type="range" id="pointLightX" min="-300" max="300" value="0">
+            </div>
+            <div class="control-group">
+                <label for="pointLightY">Point Light Y:</label>
+                <input type="range" id="pointLightY" min="-300" max="300" value="0">
+            </div>
+            <div class="control-group">
+                <label for="pointLightZ">Point Light Z:</label>
+                <input type="range" id="pointLightZ" min="-300" max="300" value="10">
+            </div>
+            <div class="control-group">
+                <label for="spotLightX">Spot Light X:</label>
+                <input type="range" id="spotLightX" min="-300" max="300" value="0">
+            </div>
+            <div class="control-group">
+                <label for="spotLightY">Spot Light Y:</label>
+                <input type="range" id="spotLightY" min="-300" max="300" value="0">
+            </div>
+            <div class="control-group">
+                <label for="spotLightZ">Spot Light Z:</label>
+                <input type="range" id="spotLightZ" min="-300" max="300" value="5">
+            </div>
+            <div class="control-group">
+                <label for="spotLightCutoff">Spot Light Cutoff:</label>
+                <input type="range" id="spotLightCutoff" min="0" max="90" value="0">
+            </div>
+        </div>
+        <div>
+            <canvas id="glCanvas" width="800" height="600"></canvas>
+        </div>
+        <div class = "controls">
+            <label for="figure"><b>Выберите фигуру:</b></label>
+            <select id="figure" name="figure">
+                <option value="balloon" selected>Шарик</option>
+                <option value="kinders">Киндеры</option>
+                <option value="bus2">Автобус</option>
+                <option value="carpet">Пол</option>
+                <option value="sphere">Глобус</option>
+
+            </select>
+            <label for="lighting"><b>Выберите освещение:</b></label>
+            <select id="lighting" name="lighting">
+                <option value="phong" selected>Phong</option>
+                <option value="toonshading">Toonshading</option>
+                <option value="other">Oren-Nayar</option>
+            </select>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
