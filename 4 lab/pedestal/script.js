@@ -30,8 +30,8 @@ const fragmentShaderSourceCube = `
     varying vec3 vColor;
     varying vec2 vTexCoord;
     uniform sampler2D uTextureNumb;         // текстура цифры
-    uniform sampler2D uTextureCube;       // общая cubeTexture
-    uniform float uMixFactorNumb;          // коэффициент смешивания (1)
+    uniform sampler2D uTextureCube;         // общая cubeTexture
+    uniform float uMixFactorNumb;           // коэффициент смешивания (1)
     uniform float uMixFactorCube;           // коэффициент смешивания (2)
     
     void main() {
@@ -42,14 +42,13 @@ const fragmentShaderSourceCube = `
         if (texColorNumb.a == 0.0) 
         {
             // Только общая текстура и цвет
-            vec3 mixedColor = mix(vColor, texColorCube.rgb, uMixFactorCube);
-            gl_FragColor = vec4(mixedColor, 1.0);
+            gl_FragColor = vec4(vColor * texColorCube.rgb, 1.0);
         } 
-        else 
+        else
         {
             // Смешиваем всё
-            vec3 colorWithNumb = mix(vColor, vColor * texColorNumb.rgb, uMixFactorNumb);
-            vec3 mixedColor = mix(colorWithNumb, texColorCube.rgb, uMixFactorCube);
+            vec3 CubeTextureWithNumb = mix(texColorNumb.rgb, texColorCube.rgb, uMixFactorNumb);
+            vec3 mixedColor = vColor * CubeTextureWithNumb;
             
             gl_FragColor = vec4(mixedColor, 1.0);
         }

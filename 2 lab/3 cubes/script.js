@@ -313,6 +313,10 @@ let cube3 = new Figure(vertexShaderCube,
 // color = [0, 0, 1, 1]
 // cube3.draw([0, 0, -7]);
 
+let translateX = 0;
+let translateY = 0;
+let translateZ = -7;
+
 function animate() {
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -322,18 +326,61 @@ function animate() {
     
     gl.viewport(0, 0, canvas.width/3, canvas.height);
     color = [1, 0, 0, 1]
-    cube1.draw([0, 0, -7]);
+    cube1.draw([translateX, translateY, translateZ]);
     
     gl.viewport(canvas.width/3, 0, canvas.width/3, canvas.height);
     color = [0, 1, 0, 1]
-    cube2.draw([0, 0, -7]);
+    cube2.draw([translateX, translateY, translateZ]);
     
     gl.viewport(canvas.width/3 * 2, 0, canvas.width/3, canvas.height);
     color = [0, 0, 1, 1]
-    cube3.draw([0, 0, -7]);
+    cube3.draw([translateX, translateY, translateZ]);
     
     requestAnimationFrame(animate);
 }
+function redraw()
+{
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.enable(gl.DEPTH_TEST);
+
+    cube.draw([translateX, translateY, translateZ]);
+}
+
+document.addEventListener('keydown', (e) => {
+    const moveStep = 0.1;
+
+    switch(e.key) {
+        case 'ArrowUp':
+            translateY += moveStep;
+            break;
+        case 'ArrowDown':
+            translateY -= moveStep;
+            break;
+        case 'ArrowLeft':
+            translateX -= moveStep;
+            break;
+        case 'ArrowRight':
+            translateX += moveStep;
+            break;
+        case 'б':
+        case ',':
+            translateZ += moveStep;
+            break;
+        case 'ю':
+        case '.':
+            translateZ -= moveStep;
+            break;
+
+        case 'к':
+        case 'r':
+            translateX = 0;
+            translateY = 0;
+            translateZ = -7;
+            break;
+    }
+    redraw()
+})
 
 // Запускаем анимацию
 animate();

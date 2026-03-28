@@ -1,7 +1,10 @@
 const canvas = document.getElementById("glCanvas");
 const gl = canvas.getContext("webgl2");
 const selectFigure = document.getElementById('figure');
+const selectShading = document.getElementById('shading');
 const selectLighting = document.getElementById('lighting');
+
+//---------[Шейдинг по Фонгу]----------
 
 const vertexShaderSource = `#version 300 es
 precision highp float;
@@ -109,157 +112,103 @@ void main() {
     fragColor = vec4(lighting * objectColor, 1.0);
 }
 `;
+//---------[Шейдинг по Гуро]----------
 
-const toonFragmentShaderSource = `#version 300 es
+const vertexShaderGouraudPhong = `#version 300 es
 precision highp float;
 
-in vec3 vPosition;
-in vec3 vNormal;
+in vec3 aPosition;
+in vec3 aOffset;
+in vec3 aNormal;
 
+uniform mat4 uMVPMatrix;
+uniform mat4 uModelMatrix;
 uniform vec3 uViewPosition;
-
 uniform vec3 uPointLightPosition;
 uniform vec3 uPointLightColor;
 uniform float uAmbientCoeff;
-
 uniform float uK0;
 uniform float uK1;
 uniform float uK2;
 
-out vec4 fragColor;
+out vec3 vColor;
 
 void main() {
-    vec3 objectColor = vec3(1.0, 1.0, 1.0);
-
-    // Нормализация нормали
-    vec3 normal = normalize(vNormal);
-
+    vec4 worldPosition = uModelMatrix * vec4(aPosition, 1.0) + vec4(aOffset, 0.0);
+    gl_Position = uMVPMatrix * worldPosition;
+    
+    vec3 normal = normalize(mat3(uModelMatrix) * aNormal);
+    vec3 position = worldPosition.xyz;
+    vec3 objectColor = vec3(1.0);
+    
     // Ambient light
     vec3 ambient = uAmbientCoeff * objectColor;
-
-    // Toon shading light steps
-    float lightLevels[4] = float[](0.2, 0.5, 0.8, 1.0);
-
+    
     // Point light
-    vec3 pointLightDir = normalize(uPointLightPosition - vPosition);
-    float pointIntensity = max(dot(normal, pointLightDir), 0.0);
-    float pointStep = lightLevels[int(pointIntensity * 4.0)];
-    float pointLightDistance = length(uPointLightPosition - vPosition);
-    float attenuation = 1.0 / (uK0 + uK1 * pointLightDistance + uK2 * pointLightDistance * pointLightDistance); // затухание
-    vec3 pointLight = attenuation * pointStep * uPointLightColor;
-
-    vec3 lighting = ambient + pointLight;
-    fragColor = vec4(lighting * objectColor, 1.0);
-}`;
-
-const orenNayarFragmentShaderSource = `#version 300 es
-precision highp float;
-
-in vec3 vPosition;
-in vec3 vNormal;
-
-uniform vec3 uViewPosition;
-
-uniform vec3 uPointLightPosition;
-uniform vec3 uPointLightColor;
-uniform float uAmbientCoeff;
-
-uniform float uK0;
-uniform float uK1;
-uniform float uK2;
-
-out vec4 fragColor;
-
-// Функция для вычисления диффузного освещения по модели Орен-Найра
-float orenNayarDiffuse(vec3 normal, vec3 lightDir, vec3 viewDir, float roughness) 
-{
-    float cosThetaI = max(dot(normal, lightDir), 0.0);
-    float cosThetaR = max(dot(normal, viewDir), 0.0);
-
-    //угол между нормалью и направлением света
-    float alpha = max(cosThetaI, cosThetaR); 
+    vec3 pointLightDir = normalize(uPointLightPosition - position);
+    vec3 viewDir = normalize(uViewPosition - position);
+    vec3 reflectDirPoint = reflect(-pointLightDir, normal);
     
-    // Угол между направлением света и наблюдателя
-    float beta = dot(normal, normalize(lightDir + viewDir));
+    float pointSpecularStrength = 0.5;
+    float specPoint = pow(max(dot(viewDir, reflectDirPoint), 0.0), 16.0);
+    vec3 pointLightSpecular = pointSpecularStrength * specPoint * uPointLightColor;
     
-    // Шероховатость за счёт аппроксимации
-    float A = 1.0 - 0.5 * (roughness * roughness) / (roughness * roughness + 0.57);
-    float B = 0.45 * (roughness * roughness) / (roughness * roughness + 0.09);
+    float pointLightDistance = length(uPointLightPosition - position);
+    float attenuation = 1.0 / (uK0 + uK1 * pointLightDistance + uK2 * pointLightDistance * pointLightDistance);
+    vec3 pointLight = uPointLightColor * max(dot(pointLightDir, normal), 0.0) + pointLightSpecular;
     
-    float E0 = 1.0; //коэффициент отражения
-
-    // Вычисление диффузного освещения по модели Орен-Найра
-    return cosThetaI * (A + B * max(0.0, beta) * sin(alpha) * tan(alpha)) * E0;
-}
-
-void main() {
-    vec3 objectColor = vec3(1.0, 1.0, 1.0);
-
-    // Нормализация нормали
-    vec3 normal = normalize(vNormal);
-
-    // Point light
-    vec3 pointLightDir = normalize(uPointLightPosition - vPosition);
-    vec3 viewDir = normalize(uViewPosition - vPosition);
-    
-    // Орен-Найра диффузное освещение для точки света
-    float pointDiffuse = orenNayarDiffuse(normal, pointLightDir, viewDir, 0.8);
-    float pointLightDistance = length(uPointLightPosition - vPosition);
-    float attenuation = 1.0 / (uK0 + uK1 * pointLightDistance + uK2 * pointLightDistance * pointLightDistance); // затухание
-    vec3 pointLight = attenuation * pointDiffuse * uPointLightColor;
-
-    vec3 lighting = uAmbientCoeff + pointLight;
-    fragColor = vec4(lighting * objectColor, 1.0);
+    vec3 lighting = ambient + attenuation * pointLight;
+    vColor = lighting * objectColor;
 }
 `;
 
-const blinnPhongFragmentShaderSource = `#version 300 es
+// Vertex shader для Gouraud шейдинга (Lambert модель)
+const vertexShaderGouraudLambert = `#version 300 es
 precision highp float;
 
-in vec3 vPosition;
-in vec3 vNormal;
+in vec3 aPosition;
+in vec3 aOffset;
+in vec3 aNormal;
 
-uniform vec3 uViewPosition;
-
+uniform mat4 uMVPMatrix;
+uniform mat4 uModelMatrix;
 uniform vec3 uPointLightPosition;
 uniform vec3 uPointLightColor;
 uniform float uAmbientCoeff;
-
 uniform float uK0;
 uniform float uK1;
 uniform float uK2;
 
-out vec4 fragColor;
+out vec3 vColor;
 
 void main() {
-    vec3 objectColor = vec3(1.0, 1.0, 1.0);
-
-    // Нормализация нормали
-    vec3 normal = normalize(vNormal);
-
-    // Ambient light
+    vec4 worldPosition = uModelMatrix * vec4(aPosition, 1.0) + vec4(aOffset, 0.0);
+    gl_Position = uMVPMatrix * worldPosition;
+    
+    vec3 normal = normalize(mat3(uModelMatrix) * aNormal);
+    vec3 position = worldPosition.xyz;
+    vec3 objectColor = vec3(1.0);
+    
     vec3 ambient = uAmbientCoeff * objectColor;
-
-    // Point light
-    vec3 pointLightDir = normalize(uPointLightPosition - vPosition);
-    vec3 viewDir = normalize(uViewPosition - vPosition);
+    vec3 pointLightDir = normalize(uPointLightPosition - position);
     
-    // Полувектор между направлением света и направлением взгляда
-    vec3 halfVector = normalize(pointLightDir + viewDir);
+    float pointLightDistance = length(uPointLightPosition - position);
+    float attenuation = 1.0 / (uK0 + uK1 * pointLightDistance + uK2 * pointLightDistance * pointLightDistance);
+    vec3 pointLight = attenuation * uPointLightColor * max(dot(normal, pointLightDir), 0.0);
     
-    float pointSpecularStrength = 0.5; // Интенсивность зеркального отражения
-    
-    // Вычисление specular по модели Блинна-Фонга
-    float specPoint = pow(max(dot(normal, halfVector), 0.0), 32.0); // Более высокая степень для более резких бликов
-    vec3 pointLightSpecular = pointSpecularStrength * specPoint * uPointLightColor;
+    vec3 lighting = ambient + pointLight;
+    vColor = lighting * objectColor;
+}
+`;
 
-    vec3 pointLightDiffuse = uPointLightColor * max(dot(normal, pointLightDir), 0.0);
+const fragmentShaderGouraud = `#version 300 es
+    precision highp float;
 
-    float pointLightDistance = length(uPointLightPosition - vPosition);
-    float attenuation = 1.0 / (uK0 + uK1 * pointLightDistance + uK2 * pointLightDistance * pointLightDistance); // затухание
+    in vec3 vColor;
+    out vec4 fragColor;
 
-    vec3 lighting = ambient + attenuation * (pointLightDiffuse + pointLightSpecular);
-    fragColor = vec4(lighting * objectColor, 1.0);
+    void main() {
+        fragColor = vec4(vColor, 1.0);
 }
 `;
 
@@ -303,45 +252,39 @@ function createProgram(gl, vertexSource, fragmentSource)
 // Класс для работы с объектами
 class GLObject 
 {
-    constructor(gl, program, objUrl, lighting, scale = [1.0, 1.0, 1.0]) 
+    constructor(gl, program, objUrl, shading, lighting, scale = [1.0, 1.0, 1.0]) 
     {
         this.gl = gl;
         this.program = program;
         this.objUrl = objUrl;
+        this.shading = shading;
         this.lighting = lighting;
         this.scale = scale;
         this.positionBuffer = null;
         this.normalBuffer = null; // Добавляем буфер для нормалей
         this.offsets = new Float32Array([0.0, 0.0, 0.0]);
         this.objData = null;
-        this.programPhong = program;
-        this.programToon = createProgram(gl, vertexShaderSource, toonFragmentShaderSource);
-        this.programOrenNayar = createProgram(gl, vertexShaderSource, orenNayarFragmentShaderSource);
-        this.programLambert = createProgram(gl, vertexShaderSource, lambertFragmentShaderSource);
-        this.programBlinnPhong = createProgram(gl, vertexShaderSource, blinnPhongFragmentShaderSource);
+        this.programPhongPhong = program;
+        this.programPhongLambert = createProgram(gl, vertexShaderSource, lambertFragmentShaderSource);
+        this.programGouraudPhong = createProgram(gl, vertexShaderGouraudPhong, fragmentShaderGouraud);
+        this.programGouraudLambert = createProgram(gl, vertexShaderGouraudLambert, fragmentShaderGouraud);
     }
 
     async changeLightingModel() 
     {
-        if (this.lighting === "phong") 
+        if (this.shading === "phong") 
         {
-            this.program = this.programPhong;
-        } 
-        else if (this.lighting === "toonshading") 
-        {
-            this.program = this.programToon;
+            if (this.lighting === "phong")
+                this.program = this.programPhongPhong;
+            else
+                this.program = this.programPhongLambert;
         }
-        else if (this.lighting === "oren-nayar")
+        else
         {
-            this.program = this.programOrenNayar;
-        }
-        else if (this.lighting === "lambert")
-        {
-            this.program = this.programLambert;
-        }
-        else if (this.lighting === "blinn-phong")
-        {
-            this.program = this.programBlinnPhong;
+            if (this.lighting === "phong")
+                this.program = this.programGouraudPhong;
+            else
+                this.program = this.programGouraudLambert;       
         }
     }
 
@@ -493,10 +436,10 @@ function updateModelViewMatrix(modelMatrix, cameraPosition, cameraTarget, camera
     const program = createProgram(gl, vertexShaderSource, fragmentShaderSource);
 
     // Создание объектов
-    const snowman = new GLObject(gl, program, "snowman.obj", "phong", [4, 4, 4]);
-    const balloon = new GLObject(gl, program, "balloon.obj", "phong", [1.0, 1.0, 1.0]);
-    const gun = new GLObject(gl, program, "Gun.obj", "phong", [15.0, 15.0, 15.0]);
-    const carpet = new GLObject(gl, program, "cube.obj", "phong", [1000.0,7.0,1000.0]);
+    const snowman = new GLObject(gl, program, "snowman.obj", "phong", "phong", [4, 4, 4]);
+    const balloon = new GLObject(gl, program, "balloon.obj", "phong", "phong", [1.0, 1.0, 1.0]);
+    const gun = new GLObject(gl, program, "Gun.obj", "phong", "phong", [15.0, 15.0, 15.0]);
+    const carpet = new GLObject(gl, program, "cube.obj", "phong", "phong", [1000.0,7.0,1000.0]);
 
     // Инициализация объектов
     await snowman.init();
@@ -564,6 +507,12 @@ function updateModelViewMatrix(modelMatrix, cameraPosition, cameraTarget, camera
         }
 
         selectLighting.value = currentFigure.lighting;
+    });
+
+    // Обработчик шейдинга для выбранной фигуры
+    selectShading.addEventListener('change', (e) => {
+        currentFigure.shading = e.target.value;
+        currentFigure.changeLightingModel();
     });
 
     // Обработчик света для выбранной фигуры
