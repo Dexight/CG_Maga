@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL</title>
+    <style>
+        body{
+            margin: 0;
+            padding: 0;
+        }
+        canvas {
+            display: block;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .control-group {
+            margin-bottom: 10px;
+        }
+        .panels {
+            display: flex;
+            flex-direction: row;
+        }
+        .all {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-around;
+        }
+    </style>
+</head>
+<body>
+    <div class = "all">
+        <canvas id="glCanvas" width="800" height="600"></canvas>
+        <div class="panels">
+            <div class="controls">
+                <div class="control-group">
+                    <label for="pointLightX">Point Light X:</label>
+                    <input type="range" id="pointLightX" min="-300" max="300" value="0">
+                </div>
+                <div class="control-group">
+                    <label for="pointLightY">Point Light Y:</label>
+                    <input type="range" id="pointLightY" min="-300" max="300" value="0">
+                </div>
+                <div class="control-group">
+                    <label for="pointLightZ">Point Light Z:</label>
+                    <input type="range" id="pointLightZ" min="-300" max="300" value="10">
+                </div>
+
+                <div class="control-group">
+                    <label for="rotX">Rotation X:</label>
+                    <input type="range" id="rotX" min="-180" max="180" value="0" step="1">
+                </div>
+                <div class="control-group">
+                    <label for="rotY">Rotation Y:</label>
+                    <input type="range" id="rotY" min="-180" max="180" value="0" step="1">
+                </div>
+                <div class="control-group">
+                    <label for="rotZ">Rotation Z:</label>
+                    <input type="range" id="rotZ" min="-180" max="180" value="0" step="1">
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

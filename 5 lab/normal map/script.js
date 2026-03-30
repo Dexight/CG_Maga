@@ -29,8 +29,10 @@ class GLObject
         // Загрузка OBJ-файла
         this.objData = await this.loadOBJ(this.objUrl);
 
-        // BUMP
+        // Normals
         this.computeTangents();
+
+        this.setRotationDegrees(0, 0, 0);
 
         // Создание и привязка буферов
         this.positionBuffer = this.gl.createBuffer();
@@ -162,25 +164,24 @@ class GLObject
 
         // Проходим по треугольникам
         for (let i = 0; i < positions.length; i += 9) {
-            // Вершины треугольника
             const v1 = [positions[i], positions[i+1], positions[i+2]];
             const v2 = [positions[i+3], positions[i+4], positions[i+5]];
             const v3 = [positions[i+6], positions[i+7], positions[i+8]];
             
-            // Текстурные координаты
+            // Текст. коорд.
             const uv1 = [texCoords[i/3 * 2], texCoords[i/3 * 2 + 1]];
             const uv2 = [texCoords[(i/3 + 1) * 2], texCoords[(i/3 + 1) * 2 + 1]];
             const uv3 = [texCoords[(i/3 + 2) * 2], texCoords[(i/3 + 2) * 2 + 1]];
             
-            // Вычисление векторов ребер
+            // Векторы ребер
             const edge1 = [v2[0] - v1[0], v2[1] - v1[1], v2[2] - v1[2]];
             const edge2 = [v3[0] - v1[0], v3[1] - v1[1], v3[2] - v1[2]];
             
-            // Вычисление дельт текстурных координат
+            // Дельты текстурных координат (натяжение на треугольник)
             const deltaUV1 = [uv2[0] - uv1[0], uv2[1] - uv1[1]];
             const deltaUV2 = [uv3[0] - uv1[0], uv3[1] - uv1[1]];
             
-            // Вычисление касательной
+            // Касательная
             const f = 1.0 / (deltaUV1[0] * deltaUV2[1] - deltaUV2[0] * deltaUV1[1]);
             
             const tangent = [
@@ -189,7 +190,7 @@ class GLObject
                 f * (deltaUV2[1] * edge1[2] - deltaUV1[1] * edge2[2])
             ];
             
-            // Добавляем касательную к каждой вершине треугольника
+            // Касательная -> вершина треугольника
             for (let j = 0; j < 3; j++) {
                 const idx = i/3 + j;
                 tangents[idx][0] += tangent[0];
@@ -215,9 +216,22 @@ class GLObject
 
     setOffsets(offsets) { this.offsets = new Float32Array(offsets); }
 
+    setRotationDegrees(x, y, z) 
+    {
+        this.rotation = [
+            x * Math.PI / 180,
+            y * Math.PI / 180,
+            z * Math.PI / 180
+        ];
+    }
+
     render(modelMatrix, mvpMatrix, aPosition, aTexCoord, aOffsetLocation, uTextureLocation, uModelMatrix, uMVPMatrix, cameraPosition, cameraTarget, cameraUp, uBumpMapLocation) 
     {
         updateModelViewMatrix(modelMatrix, cameraPosition, cameraTarget, cameraUp);
+
+        mat4.rotateZ(modelMatrix, modelMatrix, this.rotation[2]);
+        mat4.rotateY(modelMatrix, modelMatrix, this.rotation[1]);
+        mat4.rotateX(modelMatrix, modelMatrix, this.rotation[0]);
 
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionBuffer);
         this.gl.vertexAttribPointer(aPosition, 3, this.gl.FLOAT, false, 0, 0);
@@ -309,28 +323,21 @@ out vec4 fragColor;
 
 // Функция для получения возмущенной нормали из bump map
 vec3 getBumpedNormal() {
-    float height = texture(uBumpMap, vTexCoord).r;// Высота
-    
-    // Градиент высоты по текстурным координатам + размеру изображения
-    vec2 texelSize = 1.0 / vec2(textureSize(uBumpMap, 0));
-    float h1 = texture(uBumpMap, vTexCoord + vec2(texelSize.x, 0.0)).r;
-    float h2 = texture(uBumpMap, vTexCoord + vec2(0.0, texelSize.y)).r;
-    
-    // производные по uv
-    float du = (h1 - height);
-    float dv = (h2 - height);
-    
+    // тут оно в диапазоне [0,1]
+    vec3 bumpNormal = texture(uBumpMap, vTexCoord).rgb;
+
+    vec3 tangentNormal;
+    tangentNormal.x = bumpNormal.r * 2.0 - 1.0;
+    tangentNormal.y = bumpNormal.g * 2.0 - 1.0;
+    tangentNormal.z = bumpNormal.b * 2.0 - 1.0;
+    tangentNormal = normalize(tangentNormal);
+
     // TBN матрица
     vec3 N = normalize(vNormal);
     vec3 T = normalize(vTangent);
     vec3 B = cross(N, T);
     
-    // Вектор возмущения
-    float strength = 1.0;
-    vec3 perturbedNormalTS = normalize(vec3(-du * strength, dv*strength, 1.0));
-    
-    // Возмущенная нормаль в мировое пространство
-    return normalize(T * perturbedNormalTS.x + B * perturbedNormalTS.y + N * perturbedNormalTS.z);
+    return normalize(T * tangentNormal.x + B * tangentNormal.y + N * tangentNormal.z);
 }
 
 void main() {
@@ -442,11 +449,11 @@ function updateModelViewMatrix(modelMatrix, cameraPosition, cameraTarget, camera
     const program = createProgram(gl, vertexShaderSource, fragmentShaderSource);
 
     // Создание объектов
-    const sphere = new GLObject(gl, program, "sphere.obj","color.jpg", "bump.jpg", "phong", [20.0, 20.0, 20.0] )
+    const sphere = new GLObject(gl, program, "cup.obj","texture.jpeg", "normals.jpeg", "phong", [200.0, 200.0, 200.0] )
     // Инициализация объектов
     await sphere.init();
     //Установка смещений для sphere
-    sphere.setOffsets([0.0, -10.0, -40.0]);
+    sphere.setOffsets([0.0, -20.0, -30.0]);
 
     // Матрица проекций
     let mvpMatrix = mat4.create();
@@ -456,7 +463,7 @@ function updateModelViewMatrix(modelMatrix, cameraPosition, cameraTarget, camera
     let cameraPosition = vec3.fromValues(0, 0, -5);
     let cameraTarget = vec3.fromValues(0, 0, 0);
     let cameraUp = vec3.fromValues(0, 1, 0);
-
+    
     // Параметры источников света + обработчики ползунков позиции
     let pointLightPosition = [10.0, 10.0, 10.0];
     document.getElementById('pointLightX').addEventListener('input', (event) => {
@@ -469,6 +476,19 @@ function updateModelViewMatrix(modelMatrix, cameraPosition, cameraTarget, camera
         pointLightPosition[2] = parseFloat(event.target.value);
     });
 
+    let currentRotX = 0, currentRotY = 0, currentRotZ = 0;
+    document.getElementById('rotX').addEventListener('input', (event) => {
+        currentRotX = parseFloat(event.target.value);
+        sphere.setRotationDegrees(currentRotX, currentRotY, currentRotZ);
+    });
+    document.getElementById('rotY').addEventListener('input', (event) => {
+        currentRotY = parseFloat(event.target.value);
+        sphere.setRotationDegrees(currentRotX, currentRotY, currentRotZ);
+    });
+    document.getElementById('rotZ').addEventListener('input', (event) => {
+        currentRotZ = parseFloat(event.target.value);
+        sphere.setRotationDegrees(currentRotX, currentRotY, currentRotZ);
+    });
     // Рендеринг
     function render() 
     {
