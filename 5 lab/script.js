@@ -15,8 +15,8 @@ class GLObject
         this.scale = scale;
         this.positionBuffer = null;
         this.texCoordBuffer = null;
-        this.normalBuffer = null;  // Добавляем буфер для нормалей
-        this.tangentBuffer = null; // Буфер для касательных (для bump mapping)
+        this.normalBuffer = null;
+        this.tangentBuffer = null; // Буфер для касательных
         this.texture = null;
         this.bumpMap = null;
         this.offsets = new Float32Array([0.0, 0.0, 0.0]);
@@ -145,11 +145,10 @@ class GLObject
         };
     }
 
-    // Вычисление касательных для каждой вершины (для bump mapping)
+    // Вычисление касательных для каждой вершины
     computeTangents() {
         const positions = this.objData.positions;
         const texCoords = this.objData.texCoords;
-        const normals = this.objData.normals;
         
         if (positions.length === 0 || texCoords.length === 0) {
             return;
@@ -161,7 +160,7 @@ class GLObject
             tangents[i] = [0, 0, 0];
         }
 
-        // Проходим по треугольникам (каждые 3 вершины образуют треугольник)
+        // Проходим по треугольникам
         for (let i = 0; i < positions.length; i += 9) {
             // Вершины треугольника
             const v1 = [positions[i], positions[i+1], positions[i+2]];
@@ -216,7 +215,7 @@ class GLObject
 
     setOffsets(offsets) { this.offsets = new Float32Array(offsets); }
 
-    render(modelMatrix, mvpMatrix, aPosition, aTexCoord, aOffsetLocation, uTextureLocation, uModelMatrix, uMVPMatrix, cameraPosition, cameraTarget, cameraUp, uBumpMapLocation, uBumpStrength, bumpStrengthValue) 
+    render(modelMatrix, mvpMatrix, aPosition, aTexCoord, aOffsetLocation, uTextureLocation, uModelMatrix, uMVPMatrix, cameraPosition, cameraTarget, cameraUp, uBumpMapLocation) 
     {
         updateModelViewMatrix(modelMatrix, cameraPosition, cameraTarget, cameraUp);
 
@@ -254,7 +253,6 @@ class GLObject
         this.gl.activeTexture(this.gl.TEXTURE1);
         this.gl.bindTexture(this.gl.TEXTURE_2D, this.bumpMap);
         this.gl.uniform1i(uBumpMapLocation, 1);
-        this.gl.uniform1f(uBumpStrength, bumpStrengthValue);
 
         mat4.scale(modelMatrix, modelMatrix, this.scale);
         this.gl.uniformMatrix4fv(uModelMatrix, false, modelMatrix);
@@ -302,7 +300,6 @@ in vec3 vTangent;
 
 uniform sampler2D uTexture;
 uniform sampler2D uBumpMap;
-uniform float uBumpStrength;
 
 uniform vec3 uViewPosition;
 uniform vec3 uPointLightPosition;
@@ -314,13 +311,14 @@ out vec4 fragColor;
 vec3 getBumpedNormal() {
     float height = texture(uBumpMap, vTexCoord).r;// Высота
     
-    // Градиент высоты по текстурным координатам
-    float offset = 1.0 / 512.0;
-    float h1 = texture(uBumpMap, vTexCoord + vec2(offset, 0.0)).r;
-    float h2 = texture(uBumpMap, vTexCoord + vec2(0.0, offset)).r;
+    // Градиент высоты по текстурным координатам + размеру изображения
+    vec2 texelSize = 1.0 / vec2(textureSize(uBumpMap, 0));
+    float h1 = texture(uBumpMap, vTexCoord + vec2(texelSize.x, 0.0)).r;
+    float h2 = texture(uBumpMap, vTexCoord + vec2(0.0, texelSize.y)).r;
     
-    float du = (h1 - height) * uBumpStrength;
-    float dv = (h2 - height) * uBumpStrength;
+    // производные по uv
+    float du = (h1 - height);
+    float dv = (h2 - height);
     
     // TBN матрица
     vec3 N = normalize(vNormal);
@@ -328,7 +326,8 @@ vec3 getBumpedNormal() {
     vec3 B = cross(N, T);
     
     // Вектор возмущения
-    vec3 perturbedNormalTS = normalize(vec3(-du, -dv, 1.0));
+    float strength = 1.0;
+    vec3 perturbedNormalTS = normalize(vec3(-du * strength, dv*strength, 1.0));
     
     // Возмущенная нормаль в мировое пространство
     return normalize(T * perturbedNormalTS.x + B * perturbedNormalTS.y + N * perturbedNormalTS.z);
@@ -407,7 +406,6 @@ let uPointLightPosition
 let uPointLightColor
 let uViewPosition
 let uBumpMapLocation
-let uBumpStrength
 
 function changeLocations(gl, program)
 {
@@ -430,7 +428,6 @@ function changeLocations(gl, program)
 
     //Bump
     uBumpMapLocation = gl.getUniformLocation(program, "uBumpMap");
-    uBumpStrength = gl.getUniformLocation(program, "uBumpStrength");
 }
 
 function updateModelViewMatrix(modelMatrix, cameraPosition, cameraTarget, cameraUp) 
@@ -472,12 +469,6 @@ function updateModelViewMatrix(modelMatrix, cameraPosition, cameraTarget, camera
         pointLightPosition[2] = parseFloat(event.target.value);
     });
 
-    // Сила bump'а
-    let bumpStrength = 0.1;
-    document.getElementById('bumpStrength').addEventListener('input', (event) => {
-        bumpStrength = parseFloat(event.target.value);
-    });
-
     // Рендеринг
     function render() 
     {
@@ -495,7 +486,7 @@ function updateModelViewMatrix(modelMatrix, cameraPosition, cameraTarget, camera
         //отрисовка sphere
         changeLocations(sphere.gl, sphere.program);
         setParameters(sphere.gl);
-        sphere.render(modelMatrix, mvpMatrix, aPosition, aTexCoord, aOffsetLocation, uTextureLocation, uModelMatrix, uMVPMatrix, cameraPosition, cameraTarget, cameraUp, uBumpMapLocation, uBumpStrength, bumpStrength)
+        sphere.render(modelMatrix, mvpMatrix, aPosition, aTexCoord, aOffsetLocation, uTextureLocation, uModelMatrix, uMVPMatrix, cameraPosition, cameraTarget, cameraUp, uBumpMapLocation)
         
         requestAnimationFrame(render);
     }
