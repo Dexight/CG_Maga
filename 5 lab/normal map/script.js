@@ -449,11 +449,11 @@ function updateModelViewMatrix(modelMatrix, cameraPosition, cameraTarget, camera
     const program = createProgram(gl, vertexShaderSource, fragmentShaderSource);
 
     // Создание объектов
-    const sphere = new GLObject(gl, program, "cup.obj","texture.jpeg", "normals.jpeg", "phong", [200.0, 200.0, 200.0] )
+    const obj = new GLObject(gl, program, "cup.obj","texture.jpeg", "normals.jpeg", "phong", [200.0, 200.0, 200.0] )
     // Инициализация объектов
-    await sphere.init();
-    //Установка смещений для sphere
-    sphere.setOffsets([0.0, -20.0, -30.0]);
+    await obj.init();
+    //Установка смещений для obj
+    obj.setOffsets([0.0, -20.0, -30.0]);
 
     // Матрица проекций
     let mvpMatrix = mat4.create();
@@ -479,15 +479,15 @@ function updateModelViewMatrix(modelMatrix, cameraPosition, cameraTarget, camera
     let currentRotX = 0, currentRotY = 0, currentRotZ = 0;
     document.getElementById('rotX').addEventListener('input', (event) => {
         currentRotX = parseFloat(event.target.value);
-        sphere.setRotationDegrees(currentRotX, currentRotY, currentRotZ);
+        obj.setRotationDegrees(currentRotX, currentRotY, currentRotZ);
     });
     document.getElementById('rotY').addEventListener('input', (event) => {
         currentRotY = parseFloat(event.target.value);
-        sphere.setRotationDegrees(currentRotX, currentRotY, currentRotZ);
+        obj.setRotationDegrees(currentRotX, currentRotY, currentRotZ);
     });
     document.getElementById('rotZ').addEventListener('input', (event) => {
         currentRotZ = parseFloat(event.target.value);
-        sphere.setRotationDegrees(currentRotX, currentRotY, currentRotZ);
+        obj.setRotationDegrees(currentRotX, currentRotY, currentRotZ);
     });
     // Рендеринг
     function render() 
@@ -503,10 +503,10 @@ function updateModelViewMatrix(modelMatrix, cameraPosition, cameraTarget, camera
             gl.uniform3fv(uPointLightColor, [1.0, 1.0, 1.0]);
         }
 
-        //отрисовка sphere
-        changeLocations(sphere.gl, sphere.program);
-        setParameters(sphere.gl);
-        sphere.render(modelMatrix, mvpMatrix, aPosition, aTexCoord, aOffsetLocation, uTextureLocation, uModelMatrix, uMVPMatrix, cameraPosition, cameraTarget, cameraUp, uBumpMapLocation)
+        //отрисовка obj
+        changeLocations(obj.gl, obj.program);
+        setParameters(obj.gl);
+        obj.render(modelMatrix, mvpMatrix, aPosition, aTexCoord, aOffsetLocation, uTextureLocation, uModelMatrix, uMVPMatrix, cameraPosition, cameraTarget, cameraUp, uBumpMapLocation)
         
         requestAnimationFrame(render);
     }
